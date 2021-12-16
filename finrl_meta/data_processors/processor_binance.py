@@ -2,7 +2,8 @@ from datetime import datetime, timedelta
 from typing import List
 import numpy as np
 import pandas as pd
-import requests
+from binance.client import Client
+from talib.abstract import CCI, DX, MACD, RSI
 # from talib.abstract import CCI, DX, MACD, RSI
 # from basic_processor import BasicProcessor
 from finrl_meta.data_processors.basic_processor import BasicProcessor
@@ -11,7 +12,7 @@ from finrl_meta.data_processors.basic_processor import BasicProcessor
 class BinanceProcessor(BasicProcessor):
     def __init__(self, data_source: str, **kwargs):
         BasicProcessor.__init__(self, data_source, **kwargs)
-        self.url = "https://api.binance.com/api/v3/klines"
+        self.client = Client(kwargs['api_key'], kwargs['api_secret'])
     
     #main functions
     def download_data(self, ticker_list: List[str], start_date: str, end_date: str, time_interval: str) -> pd.DataFrame:
@@ -91,13 +92,14 @@ class BinanceProcessor(BasicProcessor):
         ignore
         '''
         req_params = {"symbol": symbol, 'interval': self.interval,
-                      'startTime': last_datetime, 'endTime': self.end_time, 
+                      'start_str': last_datetime, 'end_str': self.end_time,
                       'limit': self.limit}
         # For debugging purposes, uncomment these lines and if they throw an error
         # then you may have an error in req_params
         # r = requests.get(self.url, params=req_params)
         # print(r.text) 
-        df = pd.DataFrame(requests.get(self.url, params=req_params).json())
+        data = self.client.get_historical_klines(**req_params)
+        df = pd.DataFrame(data)
         
         if df.empty:
             return None
